@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 // Define the backend URL
-const API_URL = "http://127.0.0.1:8000/api/auth"; // Adjust this based on your Django backend
+const API_URL = "http://127.0.0.1:8000/users"; // Adjust this based on your Django backend
 
 // Load user from localStorage (if available)
 const user = localStorage.getItem("user")
@@ -38,7 +38,7 @@ export const signupUser = createAsyncThunk(
   "auth/signup",
   async (userData: { username: string; email: string; password: string }, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_URL}/signup/`, userData);
+      const response = await axios.post(`${API_URL}/register/`, userData);
       return response.data;
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.response.data.detail);
@@ -47,11 +47,16 @@ export const signupUser = createAsyncThunk(
 );
 
 // Async thunk for logout
-export const logoutUser = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  return null;
-});
+// Async thunk for logout
+export const logoutUser = createAsyncThunk(
+  "auth/logout", 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async (_, thunkAPI) => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    return null;
+  }
+);
 
 // Auth slice
 const authSlice = createSlice({
