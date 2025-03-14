@@ -41,12 +41,13 @@ export const signupUser = createAsyncThunk(
       const response = await axios.post(`${API_URL}/register/`, userData);
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response.data.detail);
+      console.error("Signup Error:", error.response?.data);
+      return thunkAPI.rejectWithValue(error.response?.data || "Signup failed");
     }
   }
 );
 
-// Async thunk for logout
+
 // Async thunk for logout
 export const logoutUser = createAsyncThunk(
   "auth/logout", 

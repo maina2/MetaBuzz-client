@@ -19,11 +19,14 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(signupUser(formData) as any);
-    navigate("/login"); // Redirect to login after signup
-  };
+// In Signup.tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const resultAction = await dispatch(signupUser(formData) as any);
+  if (signupUser.fulfilled.match(resultAction)) {
+    navigate("/login"); // Only navigate if signup was successful
+  }
+};
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border rounded shadow">
