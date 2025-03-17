@@ -10,6 +10,7 @@ const Login = () => {
   const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   const [formData, setFormData] = useState({
+    username:"",
     email: "",
     password: "",
   });
@@ -24,7 +25,7 @@ const Login = () => {
   };
 
   if (isAuthenticated) {
-    navigate("/"); // Redirect to home page after login
+    navigate("/home"); // Redirect to home page after login
   }
 
   return (
@@ -32,6 +33,15 @@ const Login = () => {
       <h2 className="text-2xl font-bold mb-4">Login</h2>
       {error && <p className="text-red-500">{error}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
+      <input
+          type="username"
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
+        />
         <input
           type="email"
           name="email"
