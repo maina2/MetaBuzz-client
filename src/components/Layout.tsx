@@ -25,13 +25,23 @@ const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} isMobile={isMobile} />
-      
-      <div className={`flex-1 transition-all duration-300 ${
-        isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-64"
-      }`}>
-        <Navbar sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} isMobile={isMobile} />
-        
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        toggleSidebar={toggleSidebar}
+        isMobile={isMobile}
+      />
+
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-64"
+        }`}
+      >
+        <Navbar
+          sidebarCollapsed={sidebarCollapsed}
+          toggleSidebar={toggleSidebar}
+          isMobile={isMobile}
+        />
+
         <main className="p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
@@ -39,7 +49,7 @@ const Layout: React.FC = () => {
             </div>
           </div>
         </main>
-        
+
         <footer className="p-4 text-center text-gray-500 text-sm mt-8">
           <p>© {new Date().getFullYear()} MetaBuzz. All rights reserved.</p>
         </footer>
