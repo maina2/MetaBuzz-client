@@ -20,7 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, toggleSidebar, isMobile })
 
   return (
 <div
-   className={`h-screen fixed left-0 top-0 bg-gray-900 text-white transition-all duration-300 shadow-xl z-50 ${
+   className={`h-screen fixed left-0 top-0  bg-gray-900 text-white transition-all duration-300 shadow-xl z-50 ${
      collapsed ? "w-20" : "w-64"
    } ${isMobile ? (collapsed ? "-translate-x-full" : "translate-x-0 w-3/4") : ""}`}
 >

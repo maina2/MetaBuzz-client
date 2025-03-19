@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 // Define API URL
-const API_URL = "http://127.0.0.1:8000/api/posts"; // Adjust based on your Django backend
+const API_URL = "http://127.0.0.1:8000/posts"; 
 
 // Initial state
 interface Post {
@@ -33,7 +33,22 @@ const initialState: PostsState = {
 // Fetch all posts
 export const fetchPosts = createAsyncThunk("posts/fetchPosts", async (_, thunkAPI) => {
   try {
-    const response = await axios.get(`${API_URL}/`);
+    // Get token from Redux state
+    const state = thunkAPI.getState() as RootState;
+    const token = state.auth.token;
+
+    // Ensure token is available before making the request
+    if (!token) {
+      return thunkAPI.rejectWithValue("No authentication token found");
+    }
+
+    // Include Authorization header
+    const response = await axios.get(API_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     return response.data;
   } catch (error: any) {
     return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to fetch posts");

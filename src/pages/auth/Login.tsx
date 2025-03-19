@@ -25,7 +25,7 @@ const Login = () => {
   };
 
   if (isAuthenticated) {
-    navigate("/home"); // Redirect to home page after login
+    navigate("/");
   }
 
   return (
