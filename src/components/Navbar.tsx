@@ -1,4 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { searchPosts, clearSearchResults } from "../redux/features/posts/postSlice";
+import { useNavigate } from "react-router-dom";
 import { BellIcon, MessageIcon, SearchIcon, MenuIcon } from "./Icons";
 
 interface NavbarProps {
@@ -8,8 +11,32 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ sidebarCollapsed, toggleSidebar, isMobile }) => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate(); // React Router navigation
+  const [query, setQuery] = useState("");
+  const searchResults = useAppSelector((state) => state.posts.searchResults);
+
+  // Handle search input
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    if (value.trim() === "") {
+      dispatch(clearSearchResults()); // Clear results when input is empty
+    } else {
+      dispatch(searchPosts(value)); // Dispatch search action
+    }
+  };
+
+  // Navigate to post when clicked
+  const handleResultClick = (postId: string) => {
+    navigate(`/posts/${postId}`); // Redirect to the post page
+    setQuery(""); // Clear input
+    dispatch(clearSearchResults()); // Clear search results after navigating
+  };
+
   return (
-    <nav className="bg-white border-b border-gray-200 py-3 px-6 shadow-sm">
+    <nav className="bg-white border-b border-gray-200 py-3 px-6 shadow-sm relative">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
           {isMobile && (
@@ -27,18 +54,39 @@ const Navbar: React.FC<NavbarProps> = ({ sidebarCollapsed, toggleSidebar, isMobi
             </div>
           )}
           
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+          {/* Search Input */}
+          <div className="relative w-64">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
               <SearchIcon size={18} />
             </span>
             <input
               type="search"
-              className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg pl-10 p-2.5 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none w-64 max-w-full"
+              className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg pl-10 p-2.5 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none w-full"
               placeholder="Search..."
+              value={query}
+              onChange={handleSearch}
             />
+
+            {/* Search Results Dropdown */}
+            {searchResults.length > 0 && (
+              <div className="absolute top-12 left-0 w-full bg-white shadow-md rounded-md border border-gray-200 mt-1 z-50">
+                <ul className="divide-y divide-gray-200">
+                  {searchResults.map((post) => (
+                    <li 
+                      key={post.id} 
+                      className="p-3 hover:bg-gray-100 text-gray-700 cursor-pointer"
+                      onClick={() => handleResultClick(post.id)}
+                    >
+                      {post.content}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Right Side Icons */}
         <div className="flex items-center space-x-2">
           <button className="p-2 rounded-full hover:bg-gray-100 relative text-gray-500">
             <MessageIcon size={20} />
