@@ -6,7 +6,7 @@ import {
   updateUserProfile,
 } from "../../redux/features/profile/profileSlice";
 
-const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/duknvsch4/";
+// const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/duknvsch4/";
 
 const Profile: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -40,7 +40,7 @@ const Profile: React.FC = () => {
 
       // If user has a Cloudinary-hosted image, prepend the base URL
       if (user.profile_picture) {
-        setPreviewImage(`${CLOUDINARY_BASE_URL}${user.profile_picture}`);
+        setPreviewImage(`${user.profile_picture}`);
       } else {
         setPreviewImage(null);
       }

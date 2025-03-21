@@ -8,6 +8,7 @@ interface UserProfile {
   email: string;
   first_name: string;
   last_name: string;
+  phone:string;
   bio: string | null;
   profile_picture: string | null;
 }
@@ -55,7 +56,7 @@ export const updateUserProfile = createAsyncThunk<UserProfile, Partial<UserProfi
       const response = await axios.put(`${API_URL}/profile/`, updatedData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+        //   "Content-Type": "application/json",
         },
       });
       return response.data;
