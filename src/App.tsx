@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/home/Home";
-// import Profile from "./pages/profile/Profile"; 
+import Profile from "./pages/profile/profile"; 
 // import Messages from "./pages/messages/Messages"; 
 // import Notifications from "./pages/notifications/Notifications";
 import Login from "./pages/auth/Login";
@@ -16,6 +16,8 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} /> 
           <Route path="/posts/:postId" element={<PostDetail />} />
+          <Route path="/profile" element={<Profile />} />
+
           {/* <Route path="profile" element={<Profile />} />
           <Route path="messages" element={<Messages />} />
           <Route path="notifications" element={<Notifications />} /> */}
