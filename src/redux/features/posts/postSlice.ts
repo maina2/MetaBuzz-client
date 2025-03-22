@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 // Define API URL
-const API_URL = "http://127.0.0.1:8000/posts"; 
+const API_URL = "http://127.0.0.1:8000/posts";
 
 // Initial state
 interface Post {
@@ -18,6 +18,7 @@ interface Post {
 
 interface PostsState {
   posts: Post[];
+  userPosts: Post[];
   searchResults: Post[];
   loading: boolean;
   error: string | null;
@@ -25,35 +26,41 @@ interface PostsState {
 
 const initialState: PostsState = {
   posts: [],
+  userPosts: [],
   searchResults: [],
   loading: false,
   error: null,
 };
 
 // Fetch all posts
-export const fetchPosts = createAsyncThunk("posts/fetchPosts", async (_, thunkAPI) => {
-  try {
-    // Get token from Redux state
-    const state = thunkAPI.getState() as RootState;
-    const token = state.auth.token;
+export const fetchPosts = createAsyncThunk(
+  "posts/fetchPosts",
+  async (_, thunkAPI) => {
+    try {
+      // Get token from Redux state
+      const state = thunkAPI.getState() as RootState;
+      const token = state.auth.token;
 
-    // Ensure token is available before making the request
-    if (!token) {
-      return thunkAPI.rejectWithValue("No authentication token found");
+      // Ensure token is available before making the request
+      if (!token) {
+        return thunkAPI.rejectWithValue("No authentication token found");
+      }
+
+      // Include Authorization header
+      const response = await axios.get(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to fetch posts"
+      );
     }
-
-    // Include Authorization header
-    const response = await axios.get(API_URL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return response.data;
-  } catch (error: any) {
-    return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to fetch posts");
   }
-});
+);
 
 // Search posts
 export const searchPosts = createAsyncThunk(
@@ -66,7 +73,9 @@ export const searchPosts = createAsyncThunk(
       });
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.detail || "Search failed");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Search failed"
+      );
     }
   }
 );
@@ -92,7 +101,29 @@ export const createPost = createAsyncThunk(
 
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to create post");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to create post"
+      );
+    }
+  }
+);
+
+// Fetch posts by a specific user
+export const fetchUserPosts = createAsyncThunk(
+  "posts/fetchUserPosts",
+  async (userId: number, thunkAPI) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/user/${userId}/posts/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to fetch user posts"
+      );
     }
   }
 );
@@ -104,7 +135,7 @@ export const editPost = createAsyncThunk(
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${API_URL}/${id}/`,
+        `${API_URL}/user/${id}/`,
         { content },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -113,24 +144,31 @@ export const editPost = createAsyncThunk(
 
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to edit post");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to edit post"
+      );
     }
   }
 );
 
 // Delete a post
-export const deletePost = createAsyncThunk("posts/deletePost", async (id: number, thunkAPI) => {
-  try {
-    const token = localStorage.getItem("token");
-    await axios.delete(`${API_URL}/${id}/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+export const deletePost = createAsyncThunk(
+  "posts/deletePost",
+  async (id: number, thunkAPI) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_URL}/user/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    return id;
-  } catch (error: any) {
-    return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to delete post");
+      return id;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to delete post"
+      );
+    }
   }
-});
+);
 
 // Posts slice
 const postsSlice = createSlice({
@@ -143,6 +181,18 @@ const postsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchUserPosts.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUserPosts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userPosts = action.payload;
+      })
+      .addCase(fetchUserPosts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
       .addCase(fetchPosts.pending, (state) => {
         state.loading = true;
       })
@@ -181,7 +231,9 @@ const postsSlice = createSlice({
       })
       .addCase(editPost.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.posts.findIndex((post) => post.id === action.payload.id);
+        const index = state.posts.findIndex(
+          (post) => post.id === action.payload.id
+        );
         if (index !== -1) {
           state.posts[index] = action.payload;
         }
