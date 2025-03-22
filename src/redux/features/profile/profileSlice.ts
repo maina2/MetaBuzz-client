@@ -11,6 +11,8 @@ interface UserProfile {
   phone:string;
   bio: string | null;
   profile_picture: string | null;
+  followers_count: number;
+  following_count:number;
 }
 
 interface ProfileState {

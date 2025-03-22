@@ -4,9 +4,8 @@ import { AppDispatch, RootState } from "../../redux/store";
 import {
   fetchUserProfile,
   updateUserProfile,
+  clearProfileState,
 } from "../../redux/features/profile/profileSlice";
-
-// const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/duknvsch4/";
 
 const Profile: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -38,7 +37,6 @@ const Profile: React.FC = () => {
         profile_picture: null,
       });
 
-      // If user has a Cloudinary-hosted image, prepend the base URL
       if (user.profile_picture) {
         setPreviewImage(`${user.profile_picture}`);
       } else {
@@ -46,6 +44,20 @@ const Profile: React.FC = () => {
       }
     }
   }, [user]);
+
+  // Add effect to handle successful update
+  useEffect(() => {
+    if (updateSuccess) {
+      setEditMode(false); // Close the edit form
+      
+      // Clear the success state after a delay
+      const timer = setTimeout(() => {
+        dispatch(clearProfileState());
+      }, 3000); // Clear success message after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [updateSuccess, dispatch]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -63,14 +75,44 @@ const Profile: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const updatedData = new FormData();
-    updatedData.append("first_name", formData.first_name);
-    updatedData.append("last_name", formData.last_name);
-    updatedData.append("bio", formData.bio);
-    updatedData.append("phone", formData.phone);
+    
+    // Only add fields that have values or have changed
+    if (formData.first_name !== user?.first_name) 
+      updatedData.append("first_name", formData.first_name);
+    if (formData.last_name !== user?.last_name) 
+      updatedData.append("last_name", formData.last_name);
+    if (formData.bio !== user?.bio) 
+      updatedData.append("bio", formData.bio);
+    if (formData.phone !== user?.phone) 
+      updatedData.append("phone", formData.phone);
     if (formData.profile_picture) {
       updatedData.append("profile_picture", formData.profile_picture);
     }
+    
     dispatch(updateUserProfile(updatedData));
+  };
+
+  const handleCancel = () => {
+    // Reset form data to current user data
+    if (user) {
+      setFormData({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        bio: user.bio || "",
+        phone: user.phone || "",
+        profile_picture: null,
+      });
+      
+      if (user.profile_picture) {
+        setPreviewImage(`${user.profile_picture}`);
+      } else {
+        setPreviewImage(null);
+      }
+    }
+    
+    setEditMode(false);
+    // Clear any previous errors
+    dispatch(clearProfileState());
   };
 
   if (loading) return <p>Loading profile...</p>;
@@ -94,8 +136,8 @@ const Profile: React.FC = () => {
           <h1 className="text-xl font-semibold">{user?.username}</h1>
           <p className="text-sm text-gray-500">{user?.email}</p>
           <div className="text-sm mt-1">
-            <span className="mr-4 font-medium">Followers:</span> {user?.followers}
-            <span className="ml-6 mr-4 font-medium">Following:</span> {user?.following}
+            <span className="mr-4 font-medium">Followers:</span> {user?.followers_count}
+            <span className="ml-6 mr-4 font-medium">Following:</span> {user?.following_count}
           </div>
         </div>
       </div>
@@ -176,7 +218,7 @@ const Profile: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setEditMode(false)}
+              onClick={handleCancel}
               className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
             >
               Cancel
