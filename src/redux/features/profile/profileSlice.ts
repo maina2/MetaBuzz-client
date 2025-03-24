@@ -1,39 +1,67 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// Define user type based on your API response
+// -----------------------------
+// Define Types
+// -----------------------------
+
+interface Post {
+  id: number;
+  content: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  author: {
+    username: string;
+    profile_picture: string | null;
+  };
+  // Add other fields as needed
+}
+
 interface UserProfile {
   id: number;
   username: string;
   email: string;
   first_name: string;
   last_name: string;
-  phone:string;
+  phone: string;
   bio: string | null;
   profile_picture: string | null;
   followers_count: number;
-  following_count:number;
+  following_count: number;
 }
 
 interface ProfileState {
   user: UserProfile | null;
+  selectedUser: UserProfile | null;         // 👈 For viewing other users' profiles
+  userPosts: Post[];                        // 👈 Posts made by the selected user
   loading: boolean;
   updating: boolean;
   error: string | null;
   updateSuccess: boolean;
 }
 
+// -----------------------------
+// Initial State
+// -----------------------------
+
 const initialState: ProfileState = {
   user: null,
+  selectedUser: null,
+  userPosts: [],
   loading: false,
   updating: false,
   error: null,
   updateSuccess: false,
 };
 
-const API_URL = 'http://127.0.0.1:8000/users'
+const API_URL = 'http://127.0.0.1:8000/users';
 
-// Fetch Profile
+// -----------------------------
+// Thunks
+// -----------------------------
+
+// Fetch logged-in user's profile
 export const fetchUserProfile = createAsyncThunk<UserProfile, void, { rejectValue: string }>(
   "profile/fetchUserProfile",
   async (_, thunkAPI) => {
@@ -49,7 +77,24 @@ export const fetchUserProfile = createAsyncThunk<UserProfile, void, { rejectValu
   }
 );
 
-// Update Profile
+// Fetch other user's profile and posts
+export const fetchUserProfileAndPosts = createAsyncThunk<
+  { user: UserProfile; posts: Post[] }, // 👈 Return type
+  string,                              // 👈 username argument
+  { rejectValue: string }
+>(
+  'profile/fetchUserProfileAndPosts',
+  async (username, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:8000/users/profile/${username}/`);
+      return res.data; // should return { user, posts }
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.detail || "Failed to fetch user profile and posts");
+    }
+  }
+);
+
+// Update logged-in user's profile
 export const updateUserProfile = createAsyncThunk<UserProfile, Partial<UserProfile>, { rejectValue: string }>(
   "profile/updateUserProfile",
   async (updatedData, thunkAPI) => {
@@ -58,7 +103,6 @@ export const updateUserProfile = createAsyncThunk<UserProfile, Partial<UserProfi
       const response = await axios.put(`${API_URL}/profile/`, updatedData, {
         headers: {
           Authorization: `Bearer ${token}`,
-        //   "Content-Type": "application/json",
         },
       });
       return response.data;
@@ -67,6 +111,10 @@ export const updateUserProfile = createAsyncThunk<UserProfile, Partial<UserProfi
     }
   }
 );
+
+// -----------------------------
+// Slice
+// -----------------------------
 
 const profileSlice = createSlice({
   name: "profile",
@@ -79,7 +127,7 @@ const profileSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch
+      // Fetch current user's profile
       .addCase(fetchUserProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -93,7 +141,7 @@ const profileSlice = createSlice({
         state.error = action.payload ?? "Unknown error";
       })
 
-      // Update
+      // Update current user's profile
       .addCase(updateUserProfile.pending, (state) => {
         state.updating = true;
         state.error = null;
@@ -107,6 +155,21 @@ const profileSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.updating = false;
         state.error = action.payload ?? "Unknown error";
+      })
+
+      // Fetch other user's profile + posts
+      .addCase(fetchUserProfileAndPosts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserProfileAndPosts.fulfilled, (state, action) => {
+        state.selectedUser = action.payload.user;
+        state.userPosts = action.payload.posts;
+        state.loading = false;
+      })
+      .addCase(fetchUserProfileAndPosts.rejected, (state, action) => {
+        state.error = action.payload ?? "Unknown error";
+        state.loading = false;
       });
   },
 });

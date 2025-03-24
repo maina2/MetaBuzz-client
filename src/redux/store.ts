@@ -4,6 +4,8 @@ import postsReducer from "./features/posts/postSlice";
 import commentsReducer from './features/comments/commentsSlice'
 import likesReducer from './features/likes/likesSlice'
 import profileReducer from "./features/profile/profileSlice";
+import followReducer from "./features/follow/followSlice";
+
 
 const store = configureStore({
   reducer: {
@@ -12,6 +14,8 @@ const store = configureStore({
     comments: commentsReducer,
     likes:likesReducer,
     profile: profileReducer,
+    follow: followReducer,
+
 
 
   },
