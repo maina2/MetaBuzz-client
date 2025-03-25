@@ -1,157 +1,132 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { RootState } from "../../store";
+  import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+  import axios from "axios";
+  import { RootState } from "../../store";
 
-// Base API URL
-const API_URL = "http://127.0.0.1:8000/users";
+  // Base API URL
+  const API_URL = "http://127.0.0.1:8000/interactions";
 
-// Get token from auth state
-const getToken = (getState: () => RootState) => {
-  const token = getState().auth.token;
-  return token ? `Bearer ${token}` : "";
-};
+  // Get token from auth state
+  const getToken = (getState: () => RootState) => {
+    const token = getState().auth.token;
+    return token ? `Bearer ${token}` : "";
+  };
 
-// Async thunk to toggle follow/unfollow
-export const toggleFollow = createAsyncThunk<
-  { message: string; userId: number },
-  number,
-  { state: RootState }
->(
-  "follow/toggleFollow",
-  async (userId, { getState, rejectWithValue }) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/${userId}/follow/`,
-        {},
-        {
+  // Async thunk to toggle follow/unfollow
+  export const toggleFollow = createAsyncThunk<
+    { message: string; userId: number; isFollowing: boolean },
+    number,
+    { state: RootState }
+  >(
+    "follow/toggleFollow",
+    async (userId, { getState, rejectWithValue }) => {
+      try {
+        const response = await axios.post(
+          `${API_URL}/${userId}/follow/`,
+          {},
+          {
+            headers: {
+              Authorization: getToken(getState),
+            },
+          }
+        );
+
+        // Determine if the user is now following or unfollowing
+        const isFollowing = response.data.message === "User followed";
+
+        return { 
+          message: response.data.message, 
+          userId,
+          isFollowing
+        };
+      } catch (error: any) {
+        return rejectWithValue(error.response?.data || "Follow/unfollow failed");
+      }
+    }
+  );
+
+  // Fetch list of followed users
+  export const fetchFollowedUsers = createAsyncThunk<
+    number[], // Return type is an array of user IDs
+    void,
+    { state: RootState }
+  >(
+    "follow/fetchFollowedUsers",
+    async (_, { getState, rejectWithValue }) => {
+      try {
+        const response = await axios.get(`${API_URL}/users/following/`, {
           headers: {
             Authorization: getToken(getState),
           },
-        }
-      );
+        });
 
-      return { message: response.data.message, userId };
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Follow/unfollow failed");
+        // Assuming the response contains an array of user IDs
+        return response.data.map((user: any) => user.id);
+      } catch (error: any) {
+        return rejectWithValue(error.response?.data || "Failed to fetch followed users");
+      }
     }
+  );
+
+  // Define the state type
+  interface FollowState {
+    followedUsers: number[];
+    loading: boolean;
+    error: string | null;
   }
-);
 
-// Async thunk to fetch followers of a user
-export const fetchFollowers = createAsyncThunk<
-  any[],
-  number,
-  { state: RootState }
->(
-  "follow/fetchFollowers",
-  async (userId, { getState, rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${API_URL}/${userId}/follow/`, {
-        headers: {
-          Authorization: getToken(getState),
-        },
-      });
+  // Initial state
+  const initialState: FollowState = {
+    followedUsers: [],
+    loading: false,
+    error: null,
+  };
 
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Fetching followers failed");
-    }
-  }
-);
+  // Create the slice
+  const followSlice = createSlice({
+    name: "follow",
+    initialState,
+    reducers: {},
+    extraReducers: (builder) => {
+      builder
+        // Toggle Follow
+        .addCase(toggleFollow.pending, (state) => {
+          state.loading = true;
+          state.error = null;
+        })
+        .addCase(toggleFollow.fulfilled, (state, action) => {
+          state.loading = false;
+          
+          if (action.payload.isFollowing) {
+            // Add user to followed users if not already present
+            if (!state.followedUsers.includes(action.payload.userId)) {
+              state.followedUsers.push(action.payload.userId);
+            }
+          } else {
+            // Remove user from followed users
+            state.followedUsers = state.followedUsers.filter(
+              (id) => id !== action.payload.userId
+            );
+          }
+        })
+        .addCase(toggleFollow.rejected, (state, action) => {
+          state.loading = false;
+          state.error = action.payload as string;
+        })
+        
+        // Fetch Followed Users
+        .addCase(fetchFollowedUsers.pending, (state) => {
+          state.loading = true;
+          state.error = null;
+        })
+        .addCase(fetchFollowedUsers.fulfilled, (state, action) => {
+          state.loading = false;
+          state.followedUsers = action.payload;
+        })
+        .addCase(fetchFollowedUsers.rejected, (state, action) => {
+          state.loading = false;
+          state.error = action.payload as string;
+        });
+    },
+  });
 
-// Async thunk to fetch who you're following
-export const fetchFollowing = createAsyncThunk<
-  any[],
-  void,
-  { state: RootState }
->(
-  "follow/fetchFollowing",
-  async (_, { getState, rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${API_URL}/following/`, {
-        headers: {
-          Authorization: getToken(getState),
-        },
-      });
-
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Fetching following failed");
-    }
-  }
-);
-
-interface FollowState {
-  loading: boolean;
-  error: string | null;
-  followers: any[];
-  following: any[];
-  followedUsers: number[];
-}
-
-const initialState: FollowState = {
-  loading: false,
-  error: null,
-  followers: [],
-  following: [],
-  followedUsers: [],
-};
-
-const followSlice = createSlice({
-  name: "follow",
-  initialState,
-  reducers: {},
-  extraReducers: (builder) => {
-    builder
-      // Toggle Follow
-      .addCase(toggleFollow.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(toggleFollow.fulfilled, (state, action) => {
-        state.loading = false;
-        const { message, userId } = action.payload;
-
-        if (message === "User followed") {
-          state.followedUsers.push(userId);
-        } else if (message === "Unfollowed user") {
-          state.followedUsers = state.followedUsers.filter((id) => id !== userId);
-        }
-      })
-      .addCase(toggleFollow.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-
-      // Fetch Followers
-      .addCase(fetchFollowers.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchFollowers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.followers = action.payload;
-      })
-      .addCase(fetchFollowers.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-
-      // ✅ Fetch Following
-      .addCase(fetchFollowing.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchFollowing.fulfilled, (state, action) => {
-        state.loading = false;
-        state.following = action.payload;
-        state.followedUsers = action.payload.map((item: any) => item.following?.id);
-      })
-      .addCase(fetchFollowing.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      });
-  },
-});
-
-export default followSlice.reducer;
+  export default followSlice.reducer;

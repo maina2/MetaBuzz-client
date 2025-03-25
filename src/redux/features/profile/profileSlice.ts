@@ -79,21 +79,27 @@ export const fetchUserProfile = createAsyncThunk<UserProfile, void, { rejectValu
 
 // Fetch other user's profile and posts
 export const fetchUserProfileAndPosts = createAsyncThunk<
-  { user: UserProfile; posts: Post[] }, // 👈 Return type
-  string,                              // 👈 username argument
+  { user: UserProfile; posts: Post[] }, 
+  number,  // Changed from string to number
   { rejectValue: string }
 >(
   'profile/fetchUserProfileAndPosts',
-  async (username, { rejectWithValue }) => {
+  async (userId, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/users/profile/${username}/`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/profile/${userId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+
+      
       return res.data; // should return { user, posts }
     } catch (err: any) {
+      console.error('Fetch error:', err.response?.data);
       return rejectWithValue(err.response?.data?.detail || "Failed to fetch user profile and posts");
     }
   }
 );
-
 // Update logged-in user's profile
 export const updateUserProfile = createAsyncThunk<UserProfile, Partial<UserProfile>, { rejectValue: string }>(
   "profile/updateUserProfile",

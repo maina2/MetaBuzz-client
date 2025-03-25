@@ -107,7 +107,8 @@ const Post = ({ post }: PostProps) => {
 
           <div>
             <Link
-              to={`/profile/${post.user.username}`}
+              to={`/profile/${post.user.id}`}
+              onClick={() => console.log("Navigating to profile", post.user.id)}
               className="font-semibold text-gray-800 hover:text-teal-500 transition-colors"
             >
               {post.user.username}
