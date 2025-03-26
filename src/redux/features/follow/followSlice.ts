@@ -11,6 +11,8 @@
     return token ? `Bearer ${token}` : "";
   };
 
+
+  
   // Async thunk to toggle follow/unfollow
   export const toggleFollow = createAsyncThunk<
     { message: string; userId: number; isFollowing: boolean },
