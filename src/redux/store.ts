@@ -5,6 +5,7 @@ import commentsReducer from './features/comments/commentsSlice'
 import likesReducer from './features/likes/likesSlice'
 import profileReducer from "./features/profile/profileSlice";
 import followReducer from "./features/follow/followSlice";
+import messagesReducer from "./features/messages/messagesSlice";
 
 
 const store = configureStore({
@@ -15,6 +16,8 @@ const store = configureStore({
     likes:likesReducer,
     profile: profileReducer,
     follow: followReducer,
+    messages: messagesReducer,
+
 
 
 
