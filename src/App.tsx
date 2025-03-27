@@ -8,6 +8,7 @@ import Signup from "./pages/auth/Signup";
 import PostDetail from "./pages/posts/PostDetail";
 import UserProfileView from "./pages/profile/UserProfileView";
 import ChatPage from "./pages/chat/ChatPage";
+import ConversationView from "./pages/chat/ConveresationView";
 function App() {
   return (
     <Router>
@@ -20,6 +21,8 @@ function App() {
           <Route path="/profile/:userId" element={<UserProfileView />} />
           {/* <Route path="/chat/:conversationId" element={<ChatPage />} /> */}
           <Route path="/messages" element={<ConversationList />} />
+          <Route path="/conversation/:conversationId" element={<ConversationView />} />
+
 
 
           {/* <Route path="profile" element={<Profile />} />

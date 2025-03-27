@@ -1,35 +1,45 @@
-// src/hooks/useChatSocket.ts
 import { useEffect, useRef } from "react";
-import { useDispatch } from "react-redux";
-import { addMessage } from "../redux/features/messages/messagesSlice";
 
-interface UseChatSocketProps {
+type UseChatSocketProps = {
   conversationId: number;
-  senderId: number;
-}
+  onMessage: (message: any) => void;
+};
 
-const WEBSOCKET_BASE = "ws://127.0.0.1:8000/ws/chat"; // Use ws:// for localhost
-
-export const useChatSocket = ({ conversationId, senderId }: UseChatSocketProps) => {
-  const dispatch = useDispatch();
+const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
   const socketRef = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef(onMessage);
+
+  // Keep ref updated with latest onMessage handler
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
-    const socketUrl = `${WEBSOCKET_BASE}/${conversationId}/`;
-    const socket = new WebSocket(socketUrl);
+    const wsUrl = `ws://localhost:8000/ws/chat/${conversationId}/`;
+
+    const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("WebSocket connected ✅");
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      dispatch(addMessage(data)); // Automatically adds the real-time message to Redux state
+
+      const normalizedMessage = {
+        id: Date.now(), // temporary fallback id
+        sender_username: data.sender_username,
+        text: data.message, // normalize field name
+        created_at: data.created_at,
+      };
+
+      console.log("WebSocket received message:", normalizedMessage);
+      onMessageRef.current(normalizedMessage);
     };
 
     socket.onclose = () => {
-      console.log("WebSocket disconnected");
+      console.log("WebSocket disconnected ❌");
     };
 
     socket.onerror = (error) => {
@@ -39,22 +49,22 @@ export const useChatSocket = ({ conversationId, senderId }: UseChatSocketProps) 
     return () => {
       socket.close();
     };
-  }, [conversationId, dispatch]);
+  }, [conversationId]); // ✅ safe now
 
-  const sendMessage = (text: string) => {
+  const sendMessage = (senderId: number, text: string) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(
         JSON.stringify({
           sender_id: senderId,
-          text,
+          message: text, // ✅ frontend sends `message`
         })
       );
     } else {
-      console.warn("WebSocket not connected yet.");
+      console.warn("WebSocket is not connected.");
     }
   };
 
-  return {
-    sendMessage,
-  };
+  return { sendMessage };
 };
+
+export default useChatSocket;

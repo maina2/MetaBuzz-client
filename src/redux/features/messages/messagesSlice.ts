@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../../store";
 
-const API_BASE = "http://127.0.0.1:8000/";
+const API_BASE = "http://127.0.0.1:8000";
 
 export interface Message {
   id: number;
@@ -66,9 +66,12 @@ export const fetchMessages = createAsyncThunk(
   async (conversationId: number, { rejectWithValue, getState }) => {
     const token = (getState() as RootState).auth.token;
     try {
-      const res = await axios.get(`${API_BASE}/messages/conversations/${conversationId}/messages/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `${API_BASE}/messages/conversations/${conversationId}/messages/`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response.data);
@@ -82,12 +85,37 @@ export const startConversation = createAsyncThunk(
   async (userId: number, { rejectWithValue, getState }) => {
     const token = (getState() as RootState).auth.token;
     try {
-      const res = await axios.post(`${API_BASE}/messages/start/${userId}/`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.post(
+        `${API_BASE}/messages/start/${userId}/`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response.data);
+    }
+  }
+);
+
+// ✅ Fetch conversation with a specific user (by user ID)
+export const fetchConversationWithUser = createAsyncThunk(
+  "messages/fetchConversationWithUser",
+  async (userId: number, { rejectWithValue, getState }) => {
+    const token = (getState() as RootState).auth.token;
+    try {
+      const res = await axios.get(
+        `${API_BASE}/messages/conversations/with/${userId}/`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return res.data.length > 0 ? res.data[0] : null; // API returns a list, we expect one match
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data || "Failed to fetch conversation"
+      );
     }
   }
 );
@@ -122,6 +150,23 @@ const messagesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchConversationWithUser.fulfilled, (state, action) => {
+        if (action.payload) {
+          const existing = state.conversations.find(
+            (c) => c.id === action.payload.id
+          );
+          if (!existing) {
+            state.conversations.push(action.payload);
+          }
+          state.activeConversation = action.payload;
+          state.messages = action.payload.messages;
+        } else {
+          state.activeConversation = null;
+          state.messages = [];
+        }
+        state.loading = false;
+      })
+
       .addCase(fetchConversations.fulfilled, (state, action) => {
         state.conversations = action.payload;
         state.loading = false;
@@ -131,7 +176,9 @@ const messagesSlice = createSlice({
         state.loading = false;
       })
       .addCase(startConversation.fulfilled, (state, action) => {
-        const exists = state.conversations.find(c => c.id === action.payload.id);
+        const exists = state.conversations.find(
+          (c) => c.id === action.payload.id
+        );
         if (!exists) {
           state.conversations.push(action.payload);
         }
@@ -143,14 +190,18 @@ const messagesSlice = createSlice({
       })
 
       .addMatcher(
-        (action) => action.type.startsWith("messages/") && action.type.endsWith("/pending"),
+        (action) =>
+          action.type.startsWith("messages/") &&
+          action.type.endsWith("/pending"),
         (state) => {
           state.loading = true;
           state.error = null;
         }
       )
       .addMatcher(
-        (action) => action.type.startsWith("messages/") && action.type.endsWith("/rejected"),
+        (action) =>
+          action.type.startsWith("messages/") &&
+          action.type.endsWith("/rejected"),
         (state, action) => {
           state.loading = false;
           state.error = action.payload as string;
