@@ -18,7 +18,7 @@ function App() {
           <Route path="/posts/:postId" element={<PostDetail />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:userId" element={<UserProfileView />} />
-          <Route path="/chat/:conversationId" element={<ChatPage />} />
+          {/* <Route path="/chat/:conversationId" element={<ChatPage />} /> */}
           <Route path="/messages" element={<ConversationList />} />
 
 

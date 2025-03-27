@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchConversations } from "../../redux/features/messages/messagesSlice";
 import { RootState, AppDispatch } from "../../redux/store";
 import { useNavigate } from "react-router-dom";
-import NewConversation from "./NewConversation";
+// import NewConversation from "./NewConversation";
 
 
 const ConversationList: React.FC = () => {
@@ -34,7 +34,7 @@ const ConversationList: React.FC = () => {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-semibold mb-4">Your Conversations</h2>
-      <NewConversation onConversationCreated={() => dispatch(fetchConversations())} />
+      {/* <NewConversation onConversationCreated={() => dispatch(fetchConversations())} /> */}
 
 
       {loading && <p>Loading...</p>}
