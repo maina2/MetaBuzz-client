@@ -14,8 +14,9 @@ const ConversationsList = () => {
     dispatch(fetchConversations());
   }, [dispatch]);
 
-  // Updated: Get the other user object, not just the ID
-  const getOtherParticipant = (participants: { id: number; username: string }[]) => {
+  const getOtherParticipant = (
+    participants: { id: number; username: string; profile_picture?: string }[]
+  ) => {
     return participants.find((user) => user.id !== currentUser?.id);
   };
 
@@ -25,25 +26,41 @@ const ConversationsList = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Your Conversations</h2>
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Chats</h2>
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
       <ul className="space-y-3">
         {conversations.map((conv) => {
-          const otherUser = getOtherParticipant(conv.participants as any); // Cast needed unless you update the type
+          const otherUser = getOtherParticipant(conv.participants);
+          const lastMessage = conv.messages?.[conv.messages.length - 1];
+
           return (
             <li
               key={conv.id}
-              className="p-3 border rounded hover:bg-gray-100 cursor-pointer"
+              className="p-3 rounded-xl hover:bg-gray-50 cursor-pointer flex items-center space-x-4 transition-all duration-200 border border-gray-200 shadow-sm"
               onClick={() => handleClick(conv.id)}
             >
-              <div className="font-medium">
-                Conversation with <span className="text-blue-600">{otherUser?.username}</span>
-              </div>
-              <div className="text-sm text-gray-600">
-                Conversation ID: {conv.id}
+              {/* Profile Picture or Initial */}
+              {otherUser?.profile_picture ? (
+                <img
+                  src={otherUser.profile_picture}
+                  alt={`${otherUser.username}'s profile`}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold text-lg">
+                  {otherUser?.username[0].toUpperCase()}
+                </div>
+              )}
+
+              {/* Username and last message */}
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">{otherUser?.username}</div>
+                <div className="text-sm text-gray-500 truncate max-w-xs">
+                  {lastMessage ? lastMessage.text : "Start chatting..."}
+                </div>
               </div>
             </li>
           );

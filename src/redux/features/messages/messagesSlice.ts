@@ -4,18 +4,33 @@ import { RootState } from "../../store";
 
 const API_BASE = "http://127.0.0.1:8000";
 
-export interface Message {
+// ✅ Participant type with profile image
+export interface Participant {
   id: number;
+  username: string;
+  email: string;
+  profile_image: string | null; // Can be null if not set
+}
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  profile_picture?: string; // <-- Add this
+}
+
+export interface Message {
+  id: number | string; // <-- change this line
+  conversation: number;
   sender: number;
   sender_username: string;
-  conversation: number;
   text: string;
   created_at: string;
 }
 
+
 export interface Conversation {
   id: number;
-  participants: number[];
+  participants: User[]; 
   messages: Message[];
   created_at: string;
 }
@@ -53,7 +68,7 @@ export const fetchConversations = createAsyncThunk(
       const res = await axios.get(`${API_BASE}/messages/conversations/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return res.data;
+      return res.data as Conversation[];
     } catch (err: any) {
       return rejectWithValue(err.response.data);
     }
@@ -72,7 +87,7 @@ export const fetchMessages = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return res.data;
+      return res.data as Message[];
     } catch (err: any) {
       return rejectWithValue(err.response.data);
     }
@@ -92,7 +107,7 @@ export const startConversation = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return res.data;
+      return res.data as Conversation;
     } catch (err: any) {
       return rejectWithValue(err.response.data);
     }
@@ -111,7 +126,7 @@ export const fetchConversationWithUser = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return res.data.length > 0 ? res.data[0] : null; // API returns a list, we expect one match
+      return res.data.length > 0 ? (res.data[0] as Conversation) : null;
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data || "Failed to fetch conversation"
@@ -129,7 +144,7 @@ export const searchUsers = createAsyncThunk(
       const res = await axios.get(`${API_BASE}/messages/search/?q=${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return res.data.users;
+      return res.data.users as User[];
     } catch (err: any) {
       return rejectWithValue(err.response.data);
     }
@@ -153,7 +168,7 @@ const messagesSlice = createSlice({
       .addCase(fetchConversationWithUser.fulfilled, (state, action) => {
         if (action.payload) {
           const existing = state.conversations.find(
-            (c) => c.id === action.payload.id
+            (c) => c.id === action.payload!.id
           );
           if (!existing) {
             state.conversations.push(action.payload);

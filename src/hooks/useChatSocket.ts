@@ -1,22 +1,35 @@
 import { useEffect, useRef } from "react";
 
-type UseChatSocketProps = {
-  conversationId: number;
-  onMessage: (message: any) => void;
+type Message = {
+  id: number | string;
+  sender: number;
+  sender_username: string;
+  text: string;
+  created_at: string;
 };
 
-const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
+type UseChatSocketProps = {
+  conversationId: number;
+  onMessage: (message: Message) => void;
+  existingMessages: Message[]; // ✅ new prop
+};
+
+const useChatSocket = ({ conversationId, onMessage, existingMessages }: UseChatSocketProps) => {
   const socketRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(onMessage);
+  const messagesRef = useRef(existingMessages);
 
-  // Keep ref updated with latest onMessage handler
+  // Keep refs updated
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
   useEffect(() => {
-    const wsUrl = `ws://localhost:8000/ws/chat/${conversationId}/`;
+    messagesRef.current = existingMessages;
+  }, [existingMessages]);
 
+  useEffect(() => {
+    const wsUrl = `ws://localhost:8000/ws/chat/${conversationId}/`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
@@ -27,15 +40,27 @@ const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      const normalizedMessage = {
-        id: Date.now(), // temporary fallback id
+      const incomingMessage: Message = {
+        id: Date.now(), // fallback id
+        sender: data.sender_id,
         sender_username: data.sender_username,
-        text: data.message, // normalize field name
+        text: data.message,
         created_at: data.created_at,
       };
 
-      console.log("WebSocket received message:", normalizedMessage);
-      onMessageRef.current(normalizedMessage);
+      const isDuplicate = messagesRef.current.some(
+        (msg) =>
+          msg.sender === incomingMessage.sender &&
+          msg.text === incomingMessage.text &&
+          Math.abs(new Date(msg.created_at).getTime() - new Date(incomingMessage.created_at).getTime()) < 5000
+      );
+
+      if (!isDuplicate) {
+        console.log("WebSocket received message:", incomingMessage);
+        onMessageRef.current(incomingMessage);
+      } else {
+        console.log("Duplicate WebSocket message ignored.");
+      }
     };
 
     socket.onclose = () => {
@@ -49,14 +74,14 @@ const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
     return () => {
       socket.close();
     };
-  }, [conversationId]); // ✅ safe now
+  }, [conversationId]);
 
   const sendMessage = (senderId: number, text: string) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(
         JSON.stringify({
           sender_id: senderId,
-          message: text, // ✅ frontend sends `message`
+          message: text,
         })
       );
     } else {
