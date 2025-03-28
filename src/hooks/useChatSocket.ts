@@ -11,22 +11,15 @@ type Message = {
 type UseChatSocketProps = {
   conversationId: number;
   onMessage: (message: Message) => void;
-  existingMessages: Message[]; // ✅ new prop
 };
 
-const useChatSocket = ({ conversationId, onMessage, existingMessages }: UseChatSocketProps) => {
+const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
   const socketRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(onMessage);
-  const messagesRef = useRef(existingMessages);
 
-  // Keep refs updated
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
-
-  useEffect(() => {
-    messagesRef.current = existingMessages;
-  }, [existingMessages]);
 
   useEffect(() => {
     const wsUrl = `ws://localhost:8000/ws/chat/${conversationId}/`;
@@ -48,19 +41,8 @@ const useChatSocket = ({ conversationId, onMessage, existingMessages }: UseChatS
         created_at: data.created_at,
       };
 
-      const isDuplicate = messagesRef.current.some(
-        (msg) =>
-          msg.sender === incomingMessage.sender &&
-          msg.text === incomingMessage.text &&
-          Math.abs(new Date(msg.created_at).getTime() - new Date(incomingMessage.created_at).getTime()) < 5000
-      );
-
-      if (!isDuplicate) {
-        console.log("WebSocket received message:", incomingMessage);
-        onMessageRef.current(incomingMessage);
-      } else {
-        console.log("Duplicate WebSocket message ignored.");
-      }
+      console.log("WebSocket received message:", incomingMessage);
+      onMessageRef.current(incomingMessage);
     };
 
     socket.onclose = () => {

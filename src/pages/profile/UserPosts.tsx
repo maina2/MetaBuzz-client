@@ -6,6 +6,8 @@ import {
   editPost,
 } from "../../redux/features/posts/postSlice";
 import { RootState, AppDispatch } from "../../redux/store";
+import { startConversation } from "../../redux/features/messages/messagesSlice";
+
 
 const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/duknvsch4/";
 

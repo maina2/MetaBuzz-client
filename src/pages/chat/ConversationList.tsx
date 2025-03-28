@@ -21,7 +21,8 @@ const ConversationsList = () => {
   };
 
   const handleClick = (conversationId: number) => {
-    navigate(`/conversation/${conversationId}`);
+    navigate(`/messages/conversation/${conversationId}`);
+
   };
 
   return (
