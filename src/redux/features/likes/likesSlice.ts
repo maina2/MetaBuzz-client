@@ -1,71 +1,55 @@
+// src/features/likes/likeSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { RootState } from "../../store";
+// import { RootState } from "../../store";
+import api from "../../../api/api"; 
 
-const API_URL = "http://127.0.0.1:8000/interactions"; 
+const API_URL = "/interactions";
 
-// ✅ Fetch likes for a post
+// Fetch likes for a post
 export const fetchLikes = createAsyncThunk(
   "likes/fetchLikes",
   async (postId: number, thunkAPI) => {
     try {
-      const state = thunkAPI.getState() as RootState;
-      const token = state.auth.token;
-
-      if (!token) {
-        return thunkAPI.rejectWithValue("No authentication token found");
-      }
-
-      const response = await axios.get(`${API_URL}/posts/${postId}/like/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await api.get(`${API_URL}/posts/${postId}/like/`);
       return { postId, likes: response.data };
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to fetch likes");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to fetch likes"
+      );
     }
   }
 );
 
-// ✅ Like or unlike a post
+// Like or unlike a post
 export const toggleLike = createAsyncThunk(
   "likes/toggleLike",
   async (postId: number, thunkAPI) => {
     try {
-      const state = thunkAPI.getState() as RootState;
-      const token = state.auth.token;
-
-      if (!token) {
-        return thunkAPI.rejectWithValue("No authentication token found");
-      }
-
-      const response = await axios.post(`${API_URL}/posts/${postId}/like/`, null, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await api.post(`${API_URL}/posts/${postId}/like/`, null);
       return { postId, message: response.data.message };
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data?.detail || "Failed to like post");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.detail || "Failed to like post"
+      );
     }
   }
 );
 
+// Define like state
 interface LikeState {
-  likes: Record<number, any[]>; // Stores likes for each post
+  likes: Record<number, any[]>; // likes[postId] = [{ liked: true }]
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
+// Initial state
 const initialState: LikeState = {
   likes: {},
   status: "idle",
   error: null,
 };
 
+// Slice
 const likeSlice = createSlice({
   name: "likes",
   initialState,
@@ -74,6 +58,7 @@ const likeSlice = createSlice({
     builder
       .addCase(fetchLikes.pending, (state) => {
         state.status = "loading";
+        state.error = null;
       })
       .addCase(fetchLikes.fulfilled, (state, action) => {
         state.status = "succeeded";
@@ -85,10 +70,15 @@ const likeSlice = createSlice({
       })
       .addCase(toggleLike.fulfilled, (state, action) => {
         const { postId, message } = action.payload;
+
         if (message === "Post liked") {
-          state.likes[postId] = [...(state.likes[postId] || []), { liked: true }];
+          state.likes[postId] = [
+            ...(state.likes[postId] || []),
+            { liked: true },
+          ];
         } else {
-          state.likes[postId] = state.likes[postId]?.filter((like) => like.liked !== true) || [];
+          state.likes[postId] =
+            state.likes[postId]?.filter((like) => like.liked !== true) || [];
         }
       });
   },

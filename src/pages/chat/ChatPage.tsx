@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchMessages  } from "../../redux/features/messages/messagesSlice";
+import { fetchMessages } from "../../redux/features/messages/messagesSlice";
 import { RootState } from "../../redux/store";
 import { AppDispatch } from "../../redux/store"; // Adjust the path as needed
 
@@ -11,12 +11,11 @@ import MessageBubble from "../../components/MessageBubble";
 
 const ChatPage = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-//   const dispatch = useDispatch();
+  //   const dispatch = useDispatch();
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const messages = useSelector((state: RootState) => state.messages.messages);
   const [text, setText] = useState("");
-  const dispatch = useDispatch<AppDispatch>(); // ✅ typed for thunk support
-
+  const dispatch = useDispatch<AppDispatch>(); //    typed for thunk support
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +46,11 @@ const ChatPage = () => {
     <div className="flex flex-col h-[calc(100vh-4rem)] p-4 bg-gray-100">
       <div className="flex-1 overflow-y-auto space-y-2 mb-4">
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} isOwn={msg.sender === currentUser.id} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isOwn={msg.sender === currentUser.id}
+          />
         ))}
         <div ref={messagesEndRef} />
       </div>

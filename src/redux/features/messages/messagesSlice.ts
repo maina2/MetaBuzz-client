@@ -1,25 +1,23 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import axios from "axios";
-import { RootState } from "../../store";
+import api from "../../../api/api"; // ✅ central API instance
 
-const API_BASE = "http://127.0.0.1:8000";
-
-// ✅ Participant type with profile image
+// ✅ Type definitions
 export interface Participant {
   id: number;
   username: string;
   email: string;
-  profile_image: string | null; // Can be null if not set
+  profile_image: string | null;
 }
+
 export interface User {
   id: number;
   username: string;
   email: string;
-  profile_picture?: string; // <-- Add this
+  profile_picture?: string;
 }
 
 export interface Message {
-  id: number | string; // <-- change this line
+  id: number | string;
   conversation: number;
   sender: number;
   sender_username: string;
@@ -27,18 +25,11 @@ export interface Message {
   created_at: string;
 }
 
-
 export interface Conversation {
   id: number;
-  participants: User[]; 
+  participants: User[];
   messages: Message[];
   created_at: string;
-}
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
 }
 
 interface MessagesState {
@@ -62,15 +53,12 @@ const initialState: MessagesState = {
 // ✅ Fetch conversations
 export const fetchConversations = createAsyncThunk(
   "messages/fetchConversations",
-  async (_, { rejectWithValue, getState }) => {
-    const token = (getState() as RootState).auth.token;
+  async (_, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API_BASE}/messages/conversations/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/messages/conversations/");
       return res.data as Conversation[];
     } catch (err: any) {
-      return rejectWithValue(err.response.data);
+      return rejectWithValue(err.response?.data || "Failed to fetch conversations");
     }
   }
 );
@@ -78,79 +66,56 @@ export const fetchConversations = createAsyncThunk(
 // ✅ Fetch messages in a conversation
 export const fetchMessages = createAsyncThunk(
   "messages/fetchMessages",
-  async (conversationId: number, { rejectWithValue, getState }) => {
-    const token = (getState() as RootState).auth.token;
+  async (conversationId: number, { rejectWithValue }) => {
     try {
-      const res = await axios.get(
-        `${API_BASE}/messages/conversations/${conversationId}/messages/`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get(`/messages/conversations/${conversationId}/messages/`);
       return res.data as Message[];
     } catch (err: any) {
-      return rejectWithValue(err.response.data);
+      return rejectWithValue(err.response?.data || "Failed to fetch messages");
     }
   }
 );
 
-// ✅ Start new conversation with user
+// ✅ Start new conversation
 export const startConversation = createAsyncThunk(
   "messages/startConversation",
-  async (userId: number, { rejectWithValue, getState }) => {
-    const token = (getState() as RootState).auth.token;
+  async (userId: number, { rejectWithValue }) => {
     try {
-      const res = await axios.post(
-        `${API_BASE}/messages/start/${userId}/`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.post(`/messages/start/${userId}/`, {});
       return res.data as Conversation;
     } catch (err: any) {
-      return rejectWithValue(err.response.data);
+      return rejectWithValue(err.response?.data || "Failed to start conversation");
     }
   }
 );
 
-// ✅ Fetch conversation with a specific user (by user ID)
+// ✅ Fetch conversation with specific user
 export const fetchConversationWithUser = createAsyncThunk(
   "messages/fetchConversationWithUser",
-  async (userId: number, { rejectWithValue, getState }) => {
-    const token = (getState() as RootState).auth.token;
+  async (userId: number, { rejectWithValue }) => {
     try {
-      const res = await axios.get(
-        `${API_BASE}/messages/conversations/with/${userId}/`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get(`/messages/conversations/with/${userId}/`);
       return res.data.length > 0 ? (res.data[0] as Conversation) : null;
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data || "Failed to fetch conversation"
-      );
+      return rejectWithValue(err.response?.data || "Failed to fetch conversation");
     }
   }
 );
 
-// ✅ Search users to start a conversation
+// ✅ Search users
 export const searchUsers = createAsyncThunk(
   "messages/searchUsers",
-  async (query: string, { rejectWithValue, getState }) => {
-    const token = (getState() as RootState).auth.token;
+  async (query: string, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API_BASE}/messages/search/?q=${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get(`/messages/search/?q=${query}`);
       return res.data.users as User[];
     } catch (err: any) {
-      return rejectWithValue(err.response.data);
+      return rejectWithValue(err.response?.data || "Search failed");
     }
   }
 );
 
+// ✅ Slice
 const messagesSlice = createSlice({
   name: "messages",
   initialState,
@@ -167,10 +132,8 @@ const messagesSlice = createSlice({
     builder
       .addCase(fetchConversationWithUser.fulfilled, (state, action) => {
         if (action.payload) {
-          const existing = state.conversations.find(
-            (c) => c.id === action.payload!.id
-          );
-          if (!existing) {
+          const exists = state.conversations.find((c) => c.id === action.payload!.id);
+          if (!exists) {
             state.conversations.push(action.payload);
           }
           state.activeConversation = action.payload;
@@ -186,28 +149,29 @@ const messagesSlice = createSlice({
         state.conversations = action.payload;
         state.loading = false;
       })
+
       .addCase(fetchMessages.fulfilled, (state, action) => {
         state.messages = action.payload;
         state.loading = false;
       })
+
       .addCase(startConversation.fulfilled, (state, action) => {
-        const exists = state.conversations.find(
-          (c) => c.id === action.payload.id
-        );
+        const exists = state.conversations.find((c) => c.id === action.payload.id);
         if (!exists) {
           state.conversations.push(action.payload);
         }
         state.activeConversation = action.payload;
         state.loading = false;
       })
+
       .addCase(searchUsers.fulfilled, (state, action) => {
         state.searchResults = action.payload;
       })
 
+      // Global loading and error handlers
       .addMatcher(
         (action) =>
-          action.type.startsWith("messages/") &&
-          action.type.endsWith("/pending"),
+          action.type.startsWith("messages/") && action.type.endsWith("/pending"),
         (state) => {
           state.loading = true;
           state.error = null;
@@ -215,8 +179,7 @@ const messagesSlice = createSlice({
       )
       .addMatcher(
         (action) =>
-          action.type.startsWith("messages/") &&
-          action.type.endsWith("/rejected"),
+          action.type.startsWith("messages/") && action.type.endsWith("/rejected"),
         (state, action) => {
           state.loading = false;
           state.error = action.payload as string;

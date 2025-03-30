@@ -27,7 +27,7 @@ const useChatSocket = ({ conversationId, onMessage }: UseChatSocketProps) => {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log("WebSocket connected ✅");
+      console.log("WebSocket connected   ");
     };
 
     socket.onmessage = (event) => {

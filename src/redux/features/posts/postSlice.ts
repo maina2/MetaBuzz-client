@@ -1,18 +1,20 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { RootState } from "../../store";
+import api from "../../../api/api"; // 👈 centralized Axios instance
 
-// Define API URL
-const API_URL = "http://127.0.0.1:8000/posts";
+const API_URL = "/posts"; // Base path only since api has baseURL
 
-// Initial state
-interface Post {
+// Types
+export interface Author {
+  id: number;
+  username: string;
+}
+
+export interface Post {
   id: number;
   content: string;
   image?: string;
-  author: {
-    id: number;
-    username: string;
-  };
+  author: Author;
   created_at: string;
 }
 
@@ -32,145 +34,90 @@ const initialState: PostsState = {
   error: null,
 };
 
-// Fetch all posts
-export const fetchPosts = createAsyncThunk(
+// -----------------------------
+// Async Thunks
+// -----------------------------
+
+export const fetchPosts = createAsyncThunk<Post[], void, { state: RootState }>(
   "posts/fetchPosts",
-  async (_, thunkAPI) => {
+  async (_, { rejectWithValue }) => {
     try {
-      // Get token from Redux state
-      const state = thunkAPI.getState() as RootState;
-      const token = state.auth.token;
-
-      // Ensure token is available before making the request
-      if (!token) {
-        return thunkAPI.rejectWithValue("No authentication token found");
-      }
-
-      // Include Authorization header
-      const response = await axios.get(API_URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await api.get(API_URL);
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to fetch posts"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Failed to fetch posts");
     }
   }
 );
 
-// Search posts
-export const searchPosts = createAsyncThunk(
+export const searchPosts = createAsyncThunk<Post[], string>(
   "posts/searchPosts",
-  async (query: string, thunkAPI) => {
+  async (query, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/search/?q=${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`${API_URL}/search/?q=${query}`);
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Search failed"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Search failed");
     }
   }
 );
 
-// Create a new post
-export const createPost = createAsyncThunk(
+export const createPost = createAsyncThunk<Post, { content: string; image?: File }>(
   "posts/createPost",
-  async (postData: { content: string; image?: File }, thunkAPI) => {
+  async (postData, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("content", postData.content);
       if (postData.image) {
         formData.append("image", postData.image);
       }
 
-      const response = await axios.post(`${API_URL}/`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await api.post(`${API_URL}/`, formData);
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to create post"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Failed to create post");
     }
   }
 );
 
-// Fetch posts by a specific user
-export const fetchUserPosts = createAsyncThunk(
+export const fetchUserPosts = createAsyncThunk<Post[], number>(
   "posts/fetchUserPosts",
-  async (userId: number, thunkAPI) => {
+  async (userId, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/user/${userId}/posts/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get(`${API_URL}/user/${userId}/posts/`);
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to fetch user posts"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Failed to fetch user posts");
     }
   }
 );
 
-// Edit a post
-export const editPost = createAsyncThunk(
+export const editPost = createAsyncThunk<Post, { id: number; content: string }>(
   "posts/editPost",
-  async ({ id, content }: { id: number; content: string }, thunkAPI) => {
+  async ({ id, content }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${API_URL}/user/${id}/`,
-        { content },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const response = await api.put(`${API_URL}/user/${id}/`, { content });
       return response.data;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to edit post"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Failed to edit post");
     }
   }
 );
 
-// Delete a post
-export const deletePost = createAsyncThunk(
+export const deletePost = createAsyncThunk<number, number>(
   "posts/deletePost",
-  async (id: number, thunkAPI) => {
+  async (id, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${API_URL}/user/${id}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      await api.delete(`${API_URL}/user/${id}/`);
       return id;
     } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to delete post"
-      );
+      return rejectWithValue(error.response?.data?.detail || "Failed to delete post");
     }
   }
 );
 
-// Posts slice
+// Slice
+
 const postsSlice = createSlice({
   name: "posts",
   initialState,
@@ -181,68 +128,70 @@ const postsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchPosts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPosts.fulfilled, (state, action: PayloadAction<Post[]>) => {
+        state.posts = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchPosts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
       .addCase(fetchUserPosts.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
-      .addCase(fetchUserPosts.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(fetchUserPosts.fulfilled, (state, action: PayloadAction<Post[]>) => {
         state.userPosts = action.payload;
+        state.loading = false;
       })
       .addCase(fetchUserPosts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      .addCase(fetchPosts.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(fetchPosts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.posts = action.payload;
-      })
-      .addCase(fetchPosts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
       .addCase(searchPosts.pending, (state) => {
         state.loading = true;
       })
-      .addCase(searchPosts.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(searchPosts.fulfilled, (state, action: PayloadAction<Post[]>) => {
         state.searchResults = action.payload;
+        state.loading = false;
       })
       .addCase(searchPosts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       .addCase(createPost.pending, (state) => {
         state.loading = true;
       })
-      .addCase(createPost.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(createPost.fulfilled, (state, action: PayloadAction<Post>) => {
         state.posts.unshift(action.payload);
+        state.loading = false;
       })
       .addCase(createPost.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       .addCase(editPost.pending, (state) => {
         state.loading = true;
       })
-      .addCase(editPost.fulfilled, (state, action) => {
+      .addCase(editPost.fulfilled, (state, action: PayloadAction<Post>) => {
+        const index = state.posts.findIndex((post) => post.id === action.payload.id);
+        if (index !== -1) state.posts[index] = action.payload;
         state.loading = false;
-        const index = state.posts.findIndex(
-          (post) => post.id === action.payload.id
-        );
-        if (index !== -1) {
-          state.posts[index] = action.payload;
-        }
       })
       .addCase(editPost.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
-      .addCase(deletePost.fulfilled, (state, action) => {
+
+      .addCase(deletePost.fulfilled, (state, action: PayloadAction<number>) => {
         state.posts = state.posts.filter((post) => post.id !== action.payload);
       })
       .addCase(deletePost.rejected, (state, action) => {
@@ -250,6 +199,8 @@ const postsSlice = createSlice({
       });
   },
 });
+
+// Exports
 
 export const { clearSearchResults } = postsSlice.actions;
 export default postsSlice.reducer;

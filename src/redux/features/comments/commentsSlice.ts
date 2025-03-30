@@ -1,13 +1,12 @@
+// src/features/comments/commentsSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { RootState } from "../../store"; // Import RootState
-
-const API_URL = "http://127.0.0.1:8000/posts";
+import api from "../../../api/api"; 
+// import { RootState } from "../../store";
 
 // Define Comment interface
 export interface Comment {
   id: number;
-  post: number; // postId
+  post: number;
   user: string;
   text: string;
   created_at: string;
@@ -15,69 +14,50 @@ export interface Comment {
 
 // Define state structure
 interface CommentsState {
-  commentsByPost: { [postId: number]: Comment[] }; // Store comments per post
+  commentsByPost: { [postId: number]: Comment[] };
   loading: boolean;
   error: string | null;
 }
 
 const initialState: CommentsState = {
-  commentsByPost: {}, // Initialize as an empty object
+  commentsByPost: {},
   loading: false,
   error: null,
 };
 
-// ✅ Function to get auth token from Redux store
-const getAuthHeaders = (state: RootState) => {
-  const token = state.auth.token; // Ensure correct token access like in postsSlice
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-// ✅ Fetch comments for a specific post (Requires authentication)
+//    Fetch comments for a specific post
 export const fetchComments = createAsyncThunk(
   "comments/fetchComments",
-  async (postId: number, { getState, rejectWithValue }) => {
+  async (postId: number, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const headers = getAuthHeaders(state);
-
-      if (!headers.Authorization) {
-        return rejectWithValue("No authentication token found");
-      }
-
-      const response = await axios.get(`${API_URL}/${postId}/comments/`, { headers });
-      return { postId, comments: response.data }; // Return postId to store comments under correct post
+      const response = await api.get(`/posts/${postId}/comments/`);
+      return { postId, comments: response.data };
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch comments");
     }
   }
 );
 
-// ✅ Create a new comment (Requires authentication)
+//  Create a new comment
 export const createComment = createAsyncThunk(
   "comments/createComment",
-  async ({ postId, text }: { postId: number; text: string }, { getState, rejectWithValue }) => {
+  async (
+    { postId, text }: { postId: number; text: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const state = getState() as RootState;
-      const headers = getAuthHeaders(state);
-
-      if (!headers.Authorization) {
-        return rejectWithValue("No authentication token found");
-      }
-
-      const response = await axios.post(
-        `${API_URL}/${postId}/comments/create/`,
-        { post: postId, text },
-        { headers }
-      );
-
-      return { postId, comment: response.data }; // Return new comment with postId
+      const response = await api.post(`/posts/${postId}/comments/create/`, {
+        post: postId,
+        text,
+      });
+      return { postId, comment: response.data };
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to post comment");
     }
   }
 );
 
-// ✅ Comments slice
+// Comments slice
 const commentsSlice = createSlice({
   name: "comments",
   initialState,
