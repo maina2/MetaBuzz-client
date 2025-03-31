@@ -6,9 +6,11 @@ import Profile from "./pages/profile/profile";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import PostDetail from "./pages/posts/PostDetail";
-import UserProfileView from "./pages/profile/UserProfileView";
+// import UserProfileView from "./pages/profile/UserProfileView";
 import ConversationView from "./pages/chat/ConveresationView";
 import MessagesLayout from "./pages/chat/MessagesLayout";
+import UserProfile from "./pages/profile/UserProfile/UserProfile";
+
 function App() {
   return (
     <Router>
@@ -17,7 +19,8 @@ function App() {
           <Route index element={<Home />} />
           <Route path="/posts/:postId" element={<PostDetail />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/:userId" element={<UserProfileView />} />
+          {/* <Route path="/profile/:userId" element={<UserProfileView />} /> */}
+          <Route path="/profile/:userId" element={<UserProfile />} />
           <Route path="/messages" element={<MessagesLayout />}>
             <Route
               index
