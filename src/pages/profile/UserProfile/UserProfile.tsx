@@ -7,8 +7,8 @@ import { toggleFollow, fetchFollowedUsers } from "../../../redux/features/follow
 import { startConversation } from "../../../redux/features/messages/messagesSlice";
 import { ProfileHeader } from "./ProfileHeader";
 import { PostItem } from "./PostItem";
-import { toggleLike } from "../../../redux/features/likes/likesSlice";
-import { CommentSection } from "./CommentSection";
+// import { toggleLike } from "../../../redux/features/likes/likesSlice";
+// import { CommentSection } from "./CommentSection";
 
 interface UserProfile {
   id: number;
