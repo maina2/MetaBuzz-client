@@ -10,44 +10,41 @@ import PostDetail from "./pages/posts/PostDetail";
 import ConversationView from "./pages/chat/ConveresationView";
 import MessagesLayout from "./pages/chat/MessagesLayout";
 import UserProfile from "./pages/profile/UserProfile/UserProfile";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="/posts/:postId" element={<PostDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          {/* <Route path="/profile/:userId" element={<UserProfileView />} /> */}
-          <Route path="/profile/:userId" element={<UserProfile />} />
-          <Route path="/messages" element={<MessagesLayout />}>
-            <Route
-              index
-              element={
-                <div className="p-6 text-gray-500">
-                  Select a conversation to start chatting
-                </div>
-              }
-            />
-            <Route
-              path="conversation/:conversationId"
-              element={<ConversationView />}
-            />
+<Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="/posts/:postId" element={<PostDetail />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<UserProfile />} />
+              <Route path="/messages" element={<MessagesLayout />}>
+                <Route
+                  index
+                  element={
+                    <div className="p-6 text-gray-500">
+                      Select a conversation to start chatting
+                    </div>
+                  }
+                />
+                <Route
+                  path="conversation/:conversationId"
+                  element={<ConversationView />}
+                />
+              </Route>
+            </Route>
           </Route>
-          {/* <Route path="/messages" element={<ConversationList />} />
-          <Route
-            path="/conversation/:conversationId"
-            element={<ConversationView />}
-          /> */}
-        </Route>
-
-        {/* Routes without Sidebar & Navbar (Auth Pages) */}
-        <Route path="/login" element={<Login />} />
-
-        <Route path="/signup" element={<Signup />} />
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
   );
 }
 
