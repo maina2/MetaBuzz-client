@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { fetchUserProfileAndPosts } from "../../../redux/features/profile/profileSlice";
 import { toggleFollow, fetchFollowedUsers } from "../../../redux/features/follow/followSlice";
@@ -9,8 +8,7 @@ import { startConversation } from "../../../redux/features/messages/messagesSlic
 import { ProfileHeader } from "./ProfileHeader";
 import { PostItem } from "./PostItem";
 import { toggleLike } from "../../../redux/features/likes/likesSlice";
-
-// import { formatDate } from "./utils";
+import { CommentSection } from "./CommentSection";
 
 interface UserProfile {
   id: number;
@@ -25,13 +23,6 @@ interface UserProfile {
   following_count: number;
 }
 
-interface Comment {
-  id: string;
-  text: string;
-  user: { username: string };
-  created_at: string;
-}
-
 interface Post {
   id: string;
   content: string;
@@ -40,8 +31,6 @@ interface Post {
   likes: number;
   comments: Comment[];
 }
-
-const API_URL = "http://127.0.0.1:8000";
 
 const UserProfileView: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -63,19 +52,10 @@ const UserProfileView: React.FC = () => {
   } = useSelector((state: RootState) => state.follow);
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
-  const token = useSelector((state: RootState) => state.auth.token);
 
   // Local state
   const [isFollowing, setIsFollowing] = useState(false);
   const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
-  const [likedPosts, setLikedPosts] = useState<string[]>([]);
-  const [commentStates, setCommentStates] = useState<{
-    [postId: string]: {
-      isCommenting: boolean;
-      newComment: string;
-      isSubmitting: boolean;
-    };
-  }>({});
   const [messageLoading, setMessageLoading] = useState(false);
 
   // Effects
@@ -84,9 +64,7 @@ const UserProfileView: React.FC = () => {
 
     if (userId) {
       const userIdNumber = parseInt(userId, 10);
-      dispatch(fetchUserProfileAndPosts(userIdNumber)).catch((error) => {
-        console.error("Profile fetch error:", error);
-      });
+      dispatch(fetchUserProfileAndPosts(userIdNumber));
     }
   }, [dispatch, userId]);
 
@@ -99,9 +77,7 @@ const UserProfileView: React.FC = () => {
   // Handlers
   const handleToggleFollow = () => {
     if (selectedUser) {
-      dispatch(toggleFollow(selectedUser.id)).catch((error) => {
-        console.error("Follow toggle error:", error);
-      });
+      dispatch(toggleFollow(selectedUser.id));
     }
   };
 
@@ -118,67 +94,10 @@ const UserProfileView: React.FC = () => {
     }
   };
 
-// Update the like handler to match working component
-const handleLikeToggle = async (postId: string) => {
-  try {
-    await dispatch(toggleLike(parseInt(postId))).unwrap();
-    // Remove the likedPosts state since we'll use Redux directly
-  } catch (err) {
-    console.error("Failed to toggle like:", err);
-  }
-};
-
-// Remove the likedPosts state declaration
-// Remove setLikedPosts from component
-
-  const handleCommentSubmit = async (postId: string) => {
-    const commentState = commentStates[postId];
-    if (!commentState || !commentState.newComment.trim()) return;
-
-    setCommentStates((prev) => ({
-      ...prev,
-      [postId]: { ...prev[postId], isSubmitting: true },
-    }));
-
-    try {
-      await axios.post(
-        `${API_URL}/posts/${postId}/comments/`,
-        { text: commentState.newComment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setCommentStates((prev) => ({
-        ...prev,
-        [postId]: { newComment: "", isCommenting: false, isSubmitting: false },
-      }));
-    } catch (err) {
-      console.error("Failed to post comment:", err);
-      setCommentStates((prev) => ({
-        ...prev,
-        [postId]: { ...prev[postId], isSubmitting: false },
-      }));
-    }
-  };
-
-  const handleCommentChange = (postId: string, value: string) => {
-    setCommentStates((prev) => ({
-      ...prev,
-      [postId]: { ...(prev[postId] || {}), newComment: value },
-    }));
-  };
-
-  const handleCommentToggle = (postId: string) => {
-    setCommentStates((prev) => ({
-      ...prev,
-      [postId]: {
-        ...(prev[postId] || { newComment: "", isSubmitting: false }),
-        isCommenting: !prev[postId]?.isCommenting,
-      },
-    }));
-  };
-
   const handleExpandPost = (postId: string) => {
-    setExpandedPosts((prev) => [...prev, postId]);
+    setExpandedPosts((prev) => 
+      prev.includes(postId) ? prev.filter(id => id !== postId) : [...prev, postId]
+    );
   };
 
   // Loading and error states
@@ -205,20 +124,15 @@ const handleLikeToggle = async (postId: string) => {
         <h2 className="text-xl font-bold text-gray-800">Posts</h2>
         {userPosts.length > 0 ? (
           userPosts.map((post) => (
-            <PostItem
-              key={post.id}
-              post={post}
-              user={selectedUser}
-              currentUser={currentUser}
-              likedPosts={likedPosts}
-              commentStates={commentStates}
-              onLikeToggle={handleLikeToggle}
-              onCommentToggle={handleCommentToggle}
-              onCommentSubmit={handleCommentSubmit}
-              onCommentChange={handleCommentChange}
-              expandedPosts={expandedPosts}
-              onExpandPost={handleExpandPost}
-            />
+            <div key={post.id} className="space-y-4">
+              <PostItem
+                post={post}
+                user={selectedUser}
+                currentUser={currentUser}
+                isExpanded={expandedPosts.includes(post.id)}
+                onExpandPost={() => handleExpandPost(post.id)}
+              />
+            </div>
           ))
         ) : (
           <p className="text-center text-gray-500">No posts yet.</p>
