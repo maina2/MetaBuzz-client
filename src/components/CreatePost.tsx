@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { createPost } from "../redux/features/posts/postSlice";
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 const CreatePost = () => {
   const dispatch = useAppDispatch();
@@ -16,6 +17,29 @@ const CreatePost = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+
+  // Emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  // Handle emoji selection
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setContent(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Initialize camera
   const startCamera = async () => {
@@ -39,11 +63,9 @@ const CreatePost = () => {
     if (canvasRef.current && videoRef.current) {
       const context = canvasRef.current.getContext('2d');
       if (context) {
-        // Set canvas dimensions to match video
         canvasRef.current.width = videoRef.current.videoWidth;
         canvasRef.current.height = videoRef.current.videoHeight;
         
-        // Draw video frame to canvas
         context.drawImage(
           videoRef.current, 
           0, 0, 
@@ -51,7 +73,6 @@ const CreatePost = () => {
           canvasRef.current.height
         );
         
-        // Convert canvas to Blob (File)
         canvasRef.current.toBlob((blob) => {
           if (blob) {
             const file = new File([blob], "captured-photo.jpg", {
@@ -115,7 +136,7 @@ const CreatePost = () => {
   if (!authUser) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg mb-8 overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100">
+    <div className="bg-white rounded-xl shadow-lg mb-8 overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100 relative">
       <div className="bg-gradient-to-r from-teal-500 to-blue-500 px-6 py-4">
         <h3 className="text-xl font-bold text-white flex items-center">
           Share Your Thoughts
@@ -136,13 +157,32 @@ const CreatePost = () => {
             </div>
           )}
 
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="What's happening in your world today?"
-            className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all resize-none"
-            rows={3}
-          ></textarea>
+          <div className="relative flex-1">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="What's happening in your world today?"
+              className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all resize-none"
+              rows={3}
+            ></textarea>
+            
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <div 
+                ref={emojiPickerRef}
+                className="absolute z-10 bottom-full mb-2 right-0"
+              >
+                <EmojiPicker 
+                  onEmojiClick={handleEmojiClick} 
+                  width={300} 
+                  height={350}
+                  skinTonesDisabled
+                  searchDisabled
+                  previewConfig={{ showPreview: false }}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Image Preview */}
@@ -249,6 +289,29 @@ const CreatePost = () => {
                 />
               </svg>
               Camera
+            </button>
+
+            {/* Emoji Button */}
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="flex items-center text-gray-600 hover:text-teal-500 transition-colors p-2 rounded-lg hover:bg-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Emoji
             </button>
           </div>
 
