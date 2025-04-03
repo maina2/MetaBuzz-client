@@ -6,10 +6,25 @@ import {
   createComment,
 } from "../redux/features/comments/commentsSlice";
 import { fetchLikes, toggleLike } from "../redux/features/likes/likesSlice";
-import { PostType } from "../types/PostType";
+import { PostType, UserType } from "../types/PostType";
+import { selectCommentsByPostId, selectLikesByPostId } from '../redux/selectors';
+
 
 interface PostProps {
   post: PostType;
+}
+
+interface CommentType {
+  id: number;
+  user: UserType;
+  text: string;
+  created_at: string;
+}
+
+interface LikeType {
+  id: number;
+  user: string;
+  post: number;
 }
 
 const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/duknvsch4/";
@@ -18,13 +33,24 @@ const Post = ({ post }: PostProps) => {
   const dispatch = useAppDispatch();
   const authUser = useAppSelector((state) => state.auth.user);
 
-  // Memoized selector to avoid re-render issues
-  const comments =
-    useAppSelector((state) => state.comments.commentsByPost[post.id]) || [];
+  // const comments = useAppSelector(
+  //   (state) => (state.comments.commentsByPost[post.id] as CommentType[]) || []
+  // );
+  
+  
+
+  // const likes = useAppSelector(
+  //   (state) => (state.likes.likes[post.id] as LikeType[]) || []
+  // );
+  const comments = useAppSelector((state) => 
+    selectCommentsByPostId(state, post.id)
+  );
   const memoizedComments = useMemo(() => comments, [comments]);
 
-  // Like state
-  const likes = useAppSelector((state) => state.likes.likes[post.id]) || [];
+  const likes = useAppSelector((state) => 
+    selectLikesByPostId(state, post.id)
+  );
+  
   const isLikedByUser = likes.some((like) => like.user === authUser?.username);
 
   const [showAllComments, setShowAllComments] = useState(false);
@@ -32,7 +58,6 @@ const Post = ({ post }: PostProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
 
-  // Fetch comments and likes when the post loads
   useEffect(() => {
     if (authUser) {
       dispatch(fetchComments(post.id));
@@ -40,7 +65,6 @@ const Post = ({ post }: PostProps) => {
     }
   }, [dispatch, post.id, authUser]);
 
-  // Handle Comment Submission
   const handleCommentSubmit = async () => {
     if (!newComment.trim() || isSubmitting) return;
     setIsSubmitting(true);
@@ -51,7 +75,6 @@ const Post = ({ post }: PostProps) => {
     setIsSubmitting(false);
   };
 
-  // Handle Like Toggle
   const handleLikeToggle = () => {
     if (authUser) {
       dispatch(toggleLike(post.id));
@@ -60,12 +83,10 @@ const Post = ({ post }: PostProps) => {
 
   const imageUrl = post.image ? `${CLOUDINARY_BASE_URL}${post.image}` : null;
 
-  // Display only 2 comments by default
   const displayedComments = showAllComments
     ? memoizedComments
     : memoizedComments.slice(0, 2);
 
-  // Format date with relative time
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -94,13 +115,13 @@ const Post = ({ post }: PostProps) => {
           <div className="h-12 w-12 rounded-full overflow-hidden shadow-sm">
             {post.user.profile_picture ? (
               <img
-                src={`${post.user.profile_picture}`}
+                src={post.user.profile_picture}
                 alt={post.user.username}
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
               <div className="h-12 w-12 rounded-full bg-gradient-to-r from-teal-400 to-blue-400 flex items-center justify-center text-white font-bold text-lg">
-                {post.user?.username?.charAt(0).toUpperCase() || "?"}
+                {post.user.username.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -108,7 +129,6 @@ const Post = ({ post }: PostProps) => {
           <div>
             <Link
               to={`/profile/${post.user.id}`}
-              onClick={() => console.log("Navigating to profile", post.user.id)}
               className="font-semibold text-gray-800 hover:text-teal-500 transition-colors"
             >
               {post.user.username}
@@ -177,10 +197,10 @@ const Post = ({ post }: PostProps) => {
           </span>
         </div>
         <div>
-          {memoizedComments.length > 0 && (
+          {post.comments_count > 0 && (
             <span>
-              {memoizedComments.length}{" "}
-              {memoizedComments.length === 1 ? "comment" : "comments"}
+              {post.comments_count}{" "}
+              {post.comments_count === 1 ? "comment" : "comments"}
             </span>
           )}
         </div>
@@ -255,19 +275,20 @@ const Post = ({ post }: PostProps) => {
           </p>
         ) : (
           <div className="space-y-3 mb-4">
+            // In the comments mapping section, replace with this:
             {displayedComments.map((comment) => (
               <div key={comment.id} className="bg-gray-50 p-3 rounded-lg">
                 <div className="flex items-start space-x-2">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
-                    {comment.user.charAt(0).toUpperCase()}
+                    {comment.user?.username?.charAt(0).toUpperCase() ?? "?"}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <Link
-                        to={`/profile/${comment.user}`}
+                        to={`/profile/${comment.user?.id ?? ""}`}
                         className="font-medium text-gray-800 hover:text-blue-500 transition-colors text-sm"
                       >
-                        {comment.user}
+                        {comment.user?.username ?? "Unknown user"}
                       </Link>
                       <span className="text-xs text-gray-500">
                         {formatDate(comment.created_at)}
@@ -305,7 +326,7 @@ const Post = ({ post }: PostProps) => {
           </button>
         )}
 
-        {/* Add a Comment (Only for Authenticated Users) */}
+        {/* Add a Comment */}
         {authUser && (
           <div className="flex items-start space-x-2 mt-3">
             <div className="h-8 w-8 rounded-full bg-gradient-to-r from-teal-400 to-blue-400 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
