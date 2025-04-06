@@ -1,6 +1,4 @@
-// src/features/likes/likeSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-// import { RootState } from "../../store";
 import api from "../../../api/api"; 
 
 const API_URL = "/interactions";
